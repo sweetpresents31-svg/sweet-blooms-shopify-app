@@ -1,0 +1,12 @@
+SWEET BLOOMS — GITHUB UPLOAD
+
+1. Download the ZIP.
+2. On your computer, right-click the ZIP and choose "Extract All".
+3. Open the extracted folder named sweet-blooms-shopify-app-files.
+4. In GitHub, stay on the "Upload files" screen.
+5. Drag ALL files and folders from inside the extracted folder into the GitHub upload area.
+   Important: upload the CONTENTS, not the ZIP itself.
+6. Wait until GitHub finishes listing the files.
+7. Scroll down and click "Commit changes".
+
+Do NOT upload any .env file containing API keys or passwords.

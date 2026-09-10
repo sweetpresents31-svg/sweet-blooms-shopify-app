@@ -1,0 +1,19 @@
+# Rename this file to shopify.app.toml after Shopify CLI creates/links the app.
+# Replace the placeholders with the values from your Shopify Partner app.
+
+client_id = "YOUR_SHOPIFY_CLIENT_ID"
+name = "Sweet Blooms"
+handle = "sweet-blooms"
+application_url = "https://YOUR-APP-URL.example.com"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,write_products,read_inventory,write_inventory,read_orders"
+
+[auth]
+redirect_urls = [
+  "https://YOUR-APP-URL.example.com/auth/callback"
+]
+
+[webhooks]
+api_version = "2026-07"

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "rose-pink",
+    "name": "Pink Rose",
+    "price": 5.5,
+    "image": "",
+    "available": true,
+    "stock": 48
+  },
+  {
+    "id": "hydrangea-white",
+    "name": "White Hydrangea",
+    "price": 8.0,
+    "image": "",
+    "available": true,
+    "stock": 18
+  },
+  {
+    "id": "rose-red",
+    "name": "Red Rose",
+    "price": 5.5,
+    "image": "",
+    "available": true,
+    "stock": 36
+  }
+]

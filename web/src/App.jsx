@@ -9,7 +9,30 @@ function App() {
   const [recipient, setRecipient] = useState("");
   const [form, setForm] = useState({ name: "", price: "", stock: "", image: "" });
   const [message, setMessage] = useState("");
+const [orders, setOrders] = useState([]);
+const [ordersLoading, setOrdersLoading] = useState(false);
+const [ordersError, setOrdersError] = useState("");
 
+  const loadOrders = async () => {
+  setOrdersLoading(true);
+  setOrdersError("");
+
+  try {
+    const r = await fetch("/api/orders");
+    const data = await r.json();
+
+    if (!r.ok) {
+      throw new Error(data?.details || data?.error || "Could not load orders");
+    }
+
+    setOrders(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("Orders error:", error);
+    setOrdersError(error.message);
+  } finally {
+    setOrdersLoading(false);
+  }
+};
   const load = async () => {
     try {
       const r = await fetch("/api/flowers");
@@ -19,7 +42,10 @@ function App() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+  load();
+  loadOrders();
+}, []);
 
   const total = useMemo(
     () => selected.reduce((sum, item) => sum + Number(item.price || 0), 0),
@@ -193,12 +219,63 @@ function App() {
         )}
 
         {tab === "orders" && (
-          <section className="panel empty-orders">
-            <div>🧾</div>
-            <h2>Order management is ready for the next phase</h2>
-            <p>Next we can connect Shopify orders, delivery date/time, card messages, customer history and status notifications.</p>
-          </section>
-        )}
+  <section className="panel">
+    <div className="section-head">
+      <div>
+        <p className="eyebrow">SHOPIFY ORDERS</p>
+        <h2>Orders</h2>
+        <p>Real orders from your Sweet Blooms Shopify store.</p>
+      </div>
+
+      <button onClick={loadOrders} disabled={ordersLoading}>
+        {ordersLoading ? "Loading..." : "Refresh orders"}
+      </button>
+    </div>
+
+    {ordersError && (
+      <p className="message">{ordersError}</p>
+    )}
+
+    {ordersLoading && orders.length === 0 ? (
+      <p>Loading Shopify orders...</p>
+    ) : orders.length === 0 ? (
+      <div className="empty-orders">
+        <div>📦</div>
+        <h3>No orders yet</h3>
+        <p>Your Shopify orders will appear here automatically.</p>
+      </div>
+    ) : (
+      <div className="orders-list">
+        {orders.map((order) => (
+          <div className="order-card" key={order.id}>
+            <div>
+              <strong>{order.name}</strong>
+              <p>{order.createdAt ? new Date(order.createdAt).toLocaleString() : ""}</p>
+            </div>
+
+            <div>
+              <strong>
+                {order.totalPriceSet?.shopMoney
+                  ? `${order.totalPriceSet.shopMoney.currencyCode} $${Number(
+                      order.totalPriceSet.shopMoney.amount
+                    ).toFixed(2)}`
+                  : ""}
+              </strong>
+
+              <p>
+                Payment: {order.displayFinancialStatus || "—"}
+              </p>
+
+              <p>
+                Fulfillment: {order.displayFulfillmentStatus || "—"}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+)}
       </main>
     </div>
   );

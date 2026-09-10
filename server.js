@@ -458,7 +458,185 @@ app.delete("/api/flowers/:id", (req, res) => {
 
   res.status(204).end();
 });
+/* -------------------------------------------------------
+   SHOPIFY ORDERS
+------------------------------------------------------- */
 
+app.get("/api/orders", async (_req, res) => {
+  try {
+    const data = await shopifyGraphQL(`
+      query SweetBloomsOrders {
+        orders(
+          first: 50
+          sortKey: CREATED_AT
+          reverse: true
+        ) {
+          nodes {
+            id
+            name
+            createdAt
+            displayFinancialStatus
+            displayFulfillmentStatus
+            email
+            phone
+            note
+
+            customer {
+              id
+              displayName
+              email
+              phone
+            }
+
+            totalPriceSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+
+            shippingAddress {
+              firstName
+              lastName
+              address1
+              address2
+              city
+              province
+              provinceCode
+              zip
+              country
+              phone
+            }
+
+            customAttributes {
+              key
+              value
+            }
+
+            lineItems(first: 50) {
+              nodes {
+                id
+                title
+                quantity
+
+                variant {
+                  id
+                  title
+                }
+
+                originalUnitPriceSet {
+                  shopMoney {
+                    amount
+                    currencyCode
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `);
+
+    const orders = data.orders.nodes.map((order) => {
+      const attributes = {};
+
+      for (const attribute of order.customAttributes || []) {
+        attributes[attribute.key] = attribute.value;
+      }
+
+      return {
+        id: order.id,
+        orderNumber: order.name,
+        createdAt: order.createdAt,
+
+        customer: {
+          name:
+            order.customer?.displayName ||
+            `${order.shippingAddress?.firstName || ""} ${
+              order.shippingAddress?.lastName || ""
+            }`.trim() ||
+            "Guest",
+
+          email:
+            order.customer?.email ||
+            order.email ||
+            "",
+
+          phone:
+            order.customer?.phone ||
+            order.phone ||
+            order.shippingAddress?.phone ||
+            ""
+        },
+
+        total: Number(
+          order.totalPriceSet?.shopMoney?.amount || 0
+        ),
+
+        currency:
+          order.totalPriceSet?.shopMoney?.currencyCode ||
+          "USD",
+
+        financialStatus:
+          order.displayFinancialStatus ||
+          "UNKNOWN",
+
+        fulfillmentStatus:
+          order.displayFulfillmentStatus ||
+          "UNFULFILLED",
+
+        note: order.note || "",
+
+        deliveryDate:
+          attributes.delivery_date ||
+          attributes["Delivery Date"] ||
+          attributes.deliveryDate ||
+          "",
+
+        deliveryTime:
+          attributes.delivery_time ||
+          attributes["Delivery Time"] ||
+          attributes.deliveryTime ||
+          "",
+
+        cardMessage:
+          attributes.card_message ||
+          attributes["Card Message"] ||
+          attributes.cardMessage ||
+          "",
+
+        shippingAddress:
+          order.shippingAddress || null,
+
+        items: order.lineItems.nodes.map((item) => ({
+          id: item.id,
+          title: item.title,
+          variant:
+            item.variant?.title || "",
+          variantId:
+            item.variant?.id || null,
+          quantity: item.quantity,
+          price: Number(
+            item.originalUnitPriceSet?.shopMoney
+              ?.amount || 0
+          )
+        }))
+      };
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error(
+      "Could not load Shopify orders:",
+      error
+    );
+
+    res.status(500).json({
+      error: "Could not load Shopify orders.",
+      details: error.message
+    });
+  }
+});
 /* -------------------------------------------------------
    FRONTEND
 ------------------------------------------------------- */

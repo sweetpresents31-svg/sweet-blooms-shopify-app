@@ -254,32 +254,70 @@ const [ordersError, setOrdersError] = useState("");
       </div>
     ) : (
       <div className="orders-list">
-        {orders.map((order) => (
-          <div className="order-card" key={order.id}>
-            <div>
-              <strong>{order.name}</strong>
-              <p>{order.createdAt ? new Date(order.createdAt).toLocaleString() : ""}</p>
-            </div>
+{orders.map((order) => {
+  const orderName = order.name || order.orderNumber || "Order";
 
-            <div>
-              <strong>
-                {order.totalPriceSet?.shopMoney
-                  ? `${order.totalPriceSet.shopMoney.currencyCode} $${Number(
-                      order.totalPriceSet.shopMoney.amount
-                    ).toFixed(2)}`
-                  : ""}
-              </strong>
+  const total =
+    order.totalPriceSet?.shopMoney?.amount ??
+    order.total ??
+    "";
 
-              <p>
-                Payment: {order.displayFinancialStatus || "—"}
+  const currency =
+    order.totalPriceSet?.shopMoney?.currencyCode ??
+    order.currency ??
+    "USD";
+
+  const paymentStatus =
+    order.displayFinancialStatus ||
+    order.financialStatus ||
+    "—";
+
+  const fulfillmentStatus =
+    order.displayFulfillmentStatus ||
+    order.fulfillmentStatus ||
+    "—";
+
+  const items =
+    order.lineItems?.nodes ||
+    order.lineItems ||
+    [];
+
+  return (
+    <div className="order-card" key={order.id || orderName}>
+      <div>
+        <strong>{orderName}</strong>
+
+        <p>
+          {order.createdAt
+            ? new Date(order.createdAt).toLocaleString()
+            : ""}
+        </p>
+
+        {items.length > 0 && (
+          <div>
+            {items.map((item, index) => (
+              <p key={item.id || index}>
+                {item.title || item.name || "Item"} × {item.quantity || 1}
               </p>
-
-              <p>
-                Fulfillment: {order.displayFulfillmentStatus || "—"}
-              </p>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
+      </div>
+
+      <div>
+        <strong>
+          {total !== ""
+            ? `${currency} $${Number(total).toFixed(2)}`
+            : ""}
+        </strong>
+
+        <p>Payment: {paymentStatus}</p>
+
+        <p>Fulfillment: {fulfillmentStatus}</p>
+      </div>
+    </div>
+  );
+})}
       </div>
     )}
   </section>

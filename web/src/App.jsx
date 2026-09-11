@@ -254,8 +254,11 @@ const [ordersError, setOrdersError] = useState("");
       </div>
     ) : (
       <div className="orders-list">
-{orders.map((order) => {
-  const orderName = order.name || order.orderNumber || "Order";
+{orders.map((order, index) => {
+  const orderName =
+    order.name ||
+    order.orderNumber ||
+    `Order ${index + 1}`;
 
   const total =
     order.totalPriceSet?.shopMoney?.amount ??
@@ -270,20 +273,54 @@ const [ordersError, setOrdersError] = useState("");
   const paymentStatus =
     order.displayFinancialStatus ||
     order.financialStatus ||
-    "—";
+    order.paymentStatus ||
+    "UNKNOWN";
 
   const fulfillmentStatus =
     order.displayFulfillmentStatus ||
     order.fulfillmentStatus ||
-    "—";
+    "UNFULFILLED";
 
   const items =
     order.lineItems?.nodes ||
     order.lineItems ||
+    order.items ||
     [];
 
+  const customerName =
+    order.customer?.displayName ||
+    [order.shippingAddress?.firstName, order.shippingAddress?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    order.customerName ||
+    "Not provided";
+
+  const email =
+    order.email ||
+    order.customer?.email ||
+    "Not provided";
+
+  const phone =
+    order.phone ||
+    order.shippingAddress?.phone ||
+    order.customer?.phone ||
+    "Not provided";
+
+  const address = order.shippingAddress
+    ? [
+        order.shippingAddress.address1,
+        order.shippingAddress.address2,
+        order.shippingAddress.city,
+        order.shippingAddress.provinceCode ||
+          order.shippingAddress.province,
+        order.shippingAddress.zip,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "Not provided";
+
   return (
-    <div className="order-card" key={order.id || orderName}>
+    <div className="order-card" key={order.id || index}>
       <div>
         <strong>{orderName}</strong>
 
@@ -295,12 +332,37 @@ const [ordersError, setOrdersError] = useState("");
 
         {items.length > 0 && (
           <div>
-            {items.map((item, index) => (
-              <p key={item.id || index}>
-                {item.title || item.name || "Item"} × {item.quantity || 1}
+            <strong>Items:</strong>
+
+            {items.map((item, itemIndex) => (
+              <p key={item.id || itemIndex}>
+                {item.title || item.name || "Item"} ×{" "}
+                {item.quantity || 1}
               </p>
             ))}
           </div>
+        )}
+
+        <p>
+          <strong>Customer:</strong> {customerName}
+        </p>
+
+        <p>
+          <strong>Email:</strong> {email}
+        </p>
+
+        <p>
+          <strong>Phone:</strong> {phone}
+        </p>
+
+        <p>
+          <strong>Delivery address:</strong> {address}
+        </p>
+
+        {order.note && (
+          <p>
+            <strong>Order note:</strong> {order.note}
+          </p>
         )}
       </div>
 
@@ -308,7 +370,7 @@ const [ordersError, setOrdersError] = useState("");
         <strong>
           {total !== ""
             ? `${currency} $${Number(total).toFixed(2)}`
-            : ""}
+            : "Total unavailable"}
         </strong>
 
         <p>Payment: {paymentStatus}</p>

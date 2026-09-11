@@ -263,11 +263,13 @@ const [ordersError, setOrdersError] = useState("");
   const total =
     order.totalPriceSet?.shopMoney?.amount ??
     order.total ??
+    order.totalPrice ??
     "";
 
   const currency =
     order.totalPriceSet?.shopMoney?.currencyCode ??
     order.currency ??
+    order.currencyCode ??
     "USD";
 
   const paymentStatus =
@@ -281,46 +283,124 @@ const [ordersError, setOrdersError] = useState("");
     order.fulfillmentStatus ||
     "UNFULFILLED";
 
-  const items =
-    order.lineItems?.nodes ||
-    order.lineItems ||
-    order.items ||
-    [];
+  const items = Array.isArray(order.lineItems?.nodes)
+    ? order.lineItems.nodes
+    : Array.isArray(order.lineItems)
+      ? order.lineItems
+      : Array.isArray(order.items)
+        ? order.items
+        : [];
+
+  const shippingAddress = order.shippingAddress || {};
 
   const customerName =
     order.customer?.displayName ||
-    [order.shippingAddress?.firstName, order.shippingAddress?.lastName]
+    [shippingAddress.firstName, shippingAddress.lastName]
       .filter(Boolean)
       .join(" ") ||
     order.customerName ||
-    "Not provided";
+    "";
 
   const email =
     order.email ||
     order.customer?.email ||
-    "Not provided";
+    "";
 
   const phone =
     order.phone ||
-    order.shippingAddress?.phone ||
+    shippingAddress.phone ||
     order.customer?.phone ||
-    "Not provided";
+    "";
 
-  const address = order.shippingAddress
-    ? [
-        order.shippingAddress.address1,
-        order.shippingAddress.address2,
-        order.shippingAddress.city,
-        order.shippingAddress.provinceCode ||
-          order.shippingAddress.province,
-        order.shippingAddress.zip,
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : "Not provided";
+  const address = [
+    shippingAddress.address1,
+    shippingAddress.address2,
+    shippingAddress.city,
+    shippingAddress.provinceCode ||
+      shippingAddress.province,
+    shippingAddress.zip,
+    shippingAddress.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const orderAttributes = Array.isArray(order.customAttributes)
+    ? order.customAttributes
+    : Array.isArray(order.attributes)
+      ? order.attributes
+      : Array.isArray(order.noteAttributes)
+        ? order.noteAttributes
+        : [];
+
+  const getAttribute = (...possibleNames) => {
+    const names = possibleNames.map((name) =>
+      String(name).trim().toLowerCase()
+    );
+
+    const found = orderAttributes.find((attribute) => {
+      const key = String(
+        attribute?.key ||
+        attribute?.name ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
+      return names.includes(key);
+    });
+
+    return found?.value || "";
+  };
+
+  const recipientName =
+    getAttribute(
+      "recipient",
+      "recipient name",
+      "recipient_name",
+      "recipientname",
+      "delivery recipient",
+      "recipient_name_text"
+    ) ||
+    order.recipient ||
+    order.recipientName ||
+    "";
+
+  const deliveryDate =
+    getAttribute(
+      "delivery date",
+      "delivery_date",
+      "deliverydate",
+      "date",
+      "requested delivery date"
+    ) ||
+    order.deliveryDate ||
+    "";
+
+  const deliveryTime =
+    getAttribute(
+      "delivery time",
+      "delivery_time",
+      "deliverytime",
+      "time",
+      "requested delivery time"
+    ) ||
+    order.deliveryTime ||
+    "";
+
+  const cardMessage =
+    getAttribute(
+      "card message",
+      "card_message",
+      "cardmessage",
+      "message",
+      "gift message",
+      "gift_message"
+    ) ||
+    order.cardMessage ||
+    "";
 
   return (
-    <div className="order-card" key={order.id || index}>
+    <div className="order-card" key={order.id || orderName || index}>
       <div>
         <strong>{orderName}</strong>
 
@@ -330,39 +410,166 @@ const [ordersError, setOrdersError] = useState("");
             : ""}
         </p>
 
-        {items.length > 0 && (
+        {(customerName || email || phone || address) && (
           <div>
-            <strong>Items:</strong>
+            <strong>Customer information</strong>
 
-            {items.map((item, itemIndex) => (
-              <p key={item.id || itemIndex}>
-                {item.title || item.name || "Item"} ×{" "}
-                {item.quantity || 1}
+            {customerName && (
+              <p>
+                <strong>Customer:</strong> {customerName}
               </p>
-            ))}
+            )}
+
+            {email && (
+              <p>
+                <strong>Email:</strong> {email}
+              </p>
+            )}
+
+            {phone && (
+              <p>
+                <strong>Phone:</strong> {phone}
+              </p>
+            )}
+
+            {address && (
+              <p>
+                <strong>Delivery address:</strong> {address}
+              </p>
+            )}
           </div>
         )}
 
-        <p>
-          <strong>Customer:</strong> {customerName}
-        </p>
+        {(recipientName ||
+          deliveryDate ||
+          deliveryTime ||
+          cardMessage) && (
+          <div>
+            <strong>Delivery details</strong>
 
-        <p>
-          <strong>Email:</strong> {email}
-        </p>
+            {recipientName && (
+              <p>
+                <strong>Recipient:</strong> {recipientName}
+              </p>
+            )}
 
-        <p>
-          <strong>Phone:</strong> {phone}
-        </p>
+            {deliveryDate && (
+              <p>
+                <strong>Delivery date:</strong> {deliveryDate}
+              </p>
+            )}
 
-        <p>
-          <strong>Delivery address:</strong> {address}
-        </p>
+            {deliveryTime && (
+              <p>
+                <strong>Delivery time:</strong> {deliveryTime}
+              </p>
+            )}
+
+            {cardMessage && (
+              <p>
+                <strong>Card message:</strong> {cardMessage}
+              </p>
+            )}
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <div>
+            <strong>Items</strong>
+
+            {items.map((item, itemIndex) => {
+              const itemAttributes = Array.isArray(item.customAttributes)
+                ? item.customAttributes
+                : Array.isArray(item.attributes)
+                  ? item.attributes
+                  : [];
+
+              const itemPrice =
+                item.originalUnitPriceSet?.shopMoney?.amount ??
+                item.discountedUnitPriceSet?.shopMoney?.amount ??
+                item.price ??
+                item.unitPrice ??
+                "";
+
+              const itemCurrency =
+                item.originalUnitPriceSet?.shopMoney?.currencyCode ??
+                item.discountedUnitPriceSet?.shopMoney?.currencyCode ??
+                currency;
+
+              return (
+                <div key={item.id || itemIndex}>
+                  <p>
+                    <strong>
+                      {item.title ||
+                        item.name ||
+                        "Item"}
+                    </strong>
+
+                    {item.variantTitle
+                      ? ` — ${item.variantTitle}`
+                      : ""}
+
+                    {" × "}
+                    {item.quantity || 1}
+
+                    {itemPrice !== ""
+                      ? ` — ${itemCurrency} $${Number(
+                          itemPrice
+                        ).toFixed(2)}`
+                      : ""}
+                  </p>
+
+                  {itemAttributes.length > 0 && (
+                    <div>
+                      {itemAttributes.map(
+                        (attribute, attributeIndex) => (
+                          <p
+                            key={`${itemIndex}-${attributeIndex}`}
+                          >
+                            <strong>
+                              {attribute.key ||
+                                attribute.name ||
+                                "Detail"}
+                              :
+                            </strong>{" "}
+                            {attribute.value || "—"}
+                          </p>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {order.note && (
           <p>
             <strong>Order note:</strong> {order.note}
           </p>
+        )}
+
+        {orderAttributes.length > 0 && (
+          <div>
+            <strong>Order details</strong>
+
+            {orderAttributes.map(
+              (attribute, attributeIndex) => (
+                <p
+                  key={`order-attribute-${attributeIndex}`}
+                >
+                  <strong>
+                    {attribute.key ||
+                      attribute.name ||
+                      "Detail"}
+                    :
+                  </strong>{" "}
+                  {attribute.value || "—"}
+                </p>
+              )
+            )}
+          </div>
         )}
       </div>
 
@@ -373,9 +580,14 @@ const [ordersError, setOrdersError] = useState("");
             : "Total unavailable"}
         </strong>
 
-        <p>Payment: {paymentStatus}</p>
+        <p>
+          <strong>Payment:</strong> {paymentStatus}
+        </p>
 
-        <p>Fulfillment: {fulfillmentStatus}</p>
+        <p>
+          <strong>Fulfillment:</strong>{" "}
+          {fulfillmentStatus}
+        </p>
       </div>
     </div>
   );

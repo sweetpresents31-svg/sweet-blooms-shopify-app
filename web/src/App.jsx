@@ -34,13 +34,21 @@ const [ordersError, setOrdersError] = useState("");
   }
 };
   const load = async () => {
-    try {
-      const r = await fetch("/api/flowers");
-      setFlowers(await r.json());
-    } catch {
-      setMessage("Could not connect to the app server.");
+  try {
+    const r = await fetch("/api/flowers");
+    const data = await r.json();
+
+    if (!r.ok) {
+      throw new Error(data?.details || data?.error || "Could not load flowers");
     }
-  };
+
+    setFlowers(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("Flowers error:", error);
+    setFlowers([]);
+    setMessage(error.message || "Could not connect to the app server.");
+  }
+};
 
   useEffect(() => {
   load();

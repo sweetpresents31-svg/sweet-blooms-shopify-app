@@ -1,8 +1,8 @@
 const categories = [
-  { name: "Birthday", image: "https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=900&q=85" },
-  { name: "Love & Romance", image: "https://images.unsplash.com/photo-1518709779341-56cf4535e94b?auto=format&fit=crop&w=900&q=85" },
-  { name: "Celebrations", image: "https://images.unsplash.com/photo-1487412912498-0447578fcca8?auto=format&fit=crop&w=900&q=85" },
-  { name: "Just Because", image: "https://images.unsplash.com/photo-1455582916367-25f75bfc6710?auto=format&fit=crop&w=900&q=85" }
+  { name: "Birthday", image: "https://cdn.shopify.com/s/files/1/0796/7172/2122/collections/sweet-blooms-birthday.jpg?v=1789131300" },
+  { name: "Love & Romance", image: "https://cdn.shopify.com/s/files/1/0796/7172/2122/collections/sweet-blooms-love-romance.jpg?v=1789131306" },
+  { name: "Celebrations", image: "https://cdn.shopify.com/s/files/1/0796/7172/2122/collections/sweet-blooms-celebrations.jpg?v=1789131313" },
+  { name: "Just Because", image: "https://cdn.shopify.com/s/files/1/0796/7172/2122/collections/sweet-blooms-just-because.jpg?v=1789131320" }
 ];
 
 function addOriginalCategories() {

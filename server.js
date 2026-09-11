@@ -462,6 +462,33 @@ app.delete("/api/flowers/:id", (req, res) => {
    SHOPIFY ORDERS
 ------------------------------------------------------- */
 
+app.get("/api/shopify-scopes", async (req, res) => {
+  try {
+    const data = await shopifyGraphQL(`
+      query {
+        currentAppInstallation {
+          accessScopes {
+            handle
+          }
+        }
+      }
+    `);
+
+    const scopes =
+      data?.currentAppInstallation?.accessScopes?.map((s) => s.handle) || [];
+
+    res.json({
+      connected: true,
+      scopes,
+    });
+  } catch (error) {
+    res.status(500).json({
+      connected: false,
+      error: error.message,
+    });
+  }
+});
+
 app.get("/api/orders", async (_req, res) => {
   try {
     const data = await shopifyGraphQL(`

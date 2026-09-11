@@ -462,33 +462,6 @@ app.delete("/api/flowers/:id", (req, res) => {
    SHOPIFY ORDERS
 ------------------------------------------------------- */
 
-app.get("/api/shopify-scopes", async (req, res) => {
-  try {
-    const data = await shopifyGraphQL(`
-      query {
-        currentAppInstallation {
-          accessScopes {
-            handle
-          }
-        }
-      }
-    `);
-
-    const scopes =
-      data?.currentAppInstallation?.accessScopes?.map((s) => s.handle) || [];
-
-    res.json({
-      connected: true,
-      scopes,
-    });
-  } catch (error) {
-    res.status(500).json({
-      connected: false,
-      error: error.message,
-    });
-  }
-});
-
 app.get("/api/orders", async (_req, res) => {
   try {
     const data = await shopifyGraphQL(`
@@ -551,6 +524,11 @@ app.get("/api/orders", async (_req, res) => {
                   title
                 }
 
+                customAttributes {
+                  key
+                  value
+                }
+
                 originalUnitPriceSet {
                   shopMoney {
                     amount
@@ -564,25 +542,148 @@ app.get("/api/orders", async (_req, res) => {
       }
     `);
 
-    const orders = data.orders.nodes.map((order) => {
+    const orders = (data?.orders?.nodes || []).map((order) => {
+      const customAttributes = Array.isArray(order.customAttributes)
+        ? order.customAttributes
+        : [];
+
       const attributes = {};
 
-      for (const attribute of order.customAttributes || []) {
-        attributes[attribute.key] = attribute.value;
+      for (const attribute of customAttributes) {
+        if (attribute?.key) {
+          attributes[String(attribute.key).trim().toLowerCase()] =
+            attribute.value || "";
+        }
       }
+
+      const getAttribute = (...names) => {
+        for (const name of names) {
+          const key = String(name).trim().toLowerCase();
+
+          if (attributes[key]) {
+            return attributes[key];
+          }
+        }
+
+        return "";
+      };
+
+      const customerName =
+        order.customer?.displayName ||
+        [
+          order.shippingAddress?.firstName,
+          order.shippingAddress?.lastName
+        ]
+          .filter(Boolean)
+          .join(" ") ||
+        "";
+
+      const recipientName =
+        getAttribute(
+          "recipient",
+          "recipient name",
+          "recipient_name",
+          "recipientname",
+          "delivery recipient"
+        ) || "";
+
+      const deliveryDate =
+        getAttribute(
+          "delivery date",
+          "delivery_date",
+          "deliverydate",
+          "requested delivery date"
+        ) || "";
+
+      const deliveryTime =
+        getAttribute(
+          "delivery time",
+          "delivery_time",
+          "deliverytime",
+          "requested delivery time"
+        ) || "";
+
+      const cardMessage =
+        getAttribute(
+          "card message",
+          "card_message",
+          "cardmessage",
+          "gift message",
+          "gift_message",
+          "message"
+        ) || "";
+
+      const lineItems = Array.isArray(order.lineItems?.nodes)
+        ? order.lineItems.nodes.map((item) => ({
+            id: item.id,
+            title: item.title || "",
+            quantity: item.quantity || 1,
+
+            variantTitle:
+              item.variant?.title || "",
+
+            variantId:
+              item.variant?.id || null,
+
+            price:
+              item.originalUnitPriceSet?.shopMoney?.amount ??
+              "",
+
+            currency:
+              item.originalUnitPriceSet?.shopMoney?.currencyCode ??
+              order.totalPriceSet?.shopMoney?.currencyCode ??
+              "USD",
+
+            customAttributes:
+              Array.isArray(item.customAttributes)
+                ? item.customAttributes
+                : []
+          }))
+        : [];
 
       return {
         id: order.id,
+
+        name: order.name,
         orderNumber: order.name,
+
         createdAt: order.createdAt,
 
+        displayFinancialStatus:
+          order.displayFinancialStatus ||
+          "UNKNOWN",
+
+        financialStatus:
+          order.displayFinancialStatus ||
+          "UNKNOWN",
+
+        displayFulfillmentStatus:
+          order.displayFulfillmentStatus ||
+          "UNFULFILLED",
+
+        fulfillmentStatus:
+          order.displayFulfillmentStatus ||
+          "UNFULFILLED",
+
+        email:
+          order.email ||
+          order.customer?.email ||
+          "",
+
+        phone:
+          order.phone ||
+          order.customer?.phone ||
+          order.shippingAddress?.phone ||
+          "",
+
+        customerName,
+
         customer: {
-          name:
-            order.customer?.displayName ||
-            `${order.shippingAddress?.firstName || ""} ${
-              order.shippingAddress?.lastName || ""
-            }`.trim() ||
-            "Guest",
+          id: order.customer?.id || null,
+
+          displayName: customerName,
+
+          name: customerName,
 
           email:
             order.customer?.email ||
@@ -596,58 +697,37 @@ app.get("/api/orders", async (_req, res) => {
             ""
         },
 
-        total: Number(
-          order.totalPriceSet?.shopMoney?.amount || 0
-        ),
-
-        currency:
-          order.totalPriceSet?.shopMoney?.currencyCode ||
-          "USD",
-
-        financialStatus:
-          order.displayFinancialStatus ||
-          "UNKNOWN",
-
-        fulfillmentStatus:
-          order.displayFulfillmentStatus ||
-          "UNFULFILLED",
-
-        note: order.note || "",
-
-        deliveryDate:
-          attributes.delivery_date ||
-          attributes["Delivery Date"] ||
-          attributes.deliveryDate ||
-          "",
-
-        deliveryTime:
-          attributes.delivery_time ||
-          attributes["Delivery Time"] ||
-          attributes.deliveryTime ||
-          "",
-
-        cardMessage:
-          attributes.card_message ||
-          attributes["Card Message"] ||
-          attributes.cardMessage ||
-          "",
-
         shippingAddress:
           order.shippingAddress || null,
 
-        items: order.lineItems.nodes.map((item) => ({
-          id: item.id,
-          title: item.title,
-          variant:
-            item.variant?.title || "",
-          variantId:
-            item.variant?.id || null,
-          quantity: item.quantity,
-          price: Number(
-            item.originalUnitPriceSet?.shopMoney
-              ?.amount || 0
-          )
-        }))
+        totalPriceSet:
+          order.totalPriceSet || null,
+
+        total:
+          order.totalPriceSet?.shopMoney?.amount ??
+          "0",
+
+        currency:
+          order.totalPriceSet?.shopMoney?.currencyCode ??
+          "USD",
+
+        note:
+          order.note || "",
+
+        customAttributes,
+
+        attributes: customAttributes,
+
+        recipientName,
+        recipient: recipientName,
+
+        deliveryDate,
+        deliveryTime,
+        cardMessage,
+
+        lineItems,
+
+        items: lineItems
       };
     });
 

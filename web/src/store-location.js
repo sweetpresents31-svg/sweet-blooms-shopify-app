@@ -5,7 +5,7 @@ function applyStoreAddress() {
     const label = card.querySelector('strong')?.textContent?.trim().toLowerCase();
     if (label === 'location') {
       const p = card.querySelector('p');
-      if (p) p.textContent = STORE_ADDRESS;
+      if (p && p.textContent !== STORE_ADDRESS) p.textContent = STORE_ADDRESS;
     }
   });
 }
